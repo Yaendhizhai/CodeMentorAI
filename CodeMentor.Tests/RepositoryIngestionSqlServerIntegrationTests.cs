@@ -18,7 +18,7 @@ namespace CodeMentor.Tests;
 public sealed class RepositoryIngestionSqlServerIntegrationTests
 {
     private const string AllowedDatabaseName = "CodeMentorAI_IntegrationTests";
-    private const string AllowedDataSource = @"(localdb)\MSSQLLocalDB";
+    private const string AllowedDataSource = "localhost";
     private const string SourceFilePath = "src/IntegrationSample.cs";
     private const string ReadmeFilePath = "docs/IntegrationFixture.md";
     private const string TreeSha = "ffffffffffffffffffffffffffffffffffffffff";
@@ -49,7 +49,7 @@ public sealed class RepositoryIngestionSqlServerIntegrationTests
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                $"The opt-in integration test only permits SQL Server instance '{AllowedDataSource}'.");
+                $"The opt-in integration test only permits SQL Server DataSource '{AllowedDataSource}'.");
         }
 
         var services = new ServiceCollection();
