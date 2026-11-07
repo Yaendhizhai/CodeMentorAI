@@ -1,0 +1,30 @@
+@baseUrl = http://localhost:5269
+@repositoryProjectId = 19079668-7f53-423f-bbf6-f46cac8c2052
+
+### Get weather forecast
+GET {{baseUrl}}/weatherforecast/
+Accept: application/json
+
+###
+
+### Register a repository project
+POST {{baseUrl}}/api/repository-projects
+Content-Type: application/json
+
+{
+  "name": "CodeMentor AI",
+  "repositoryUrl": "https://github.com/example/codementor-ai",
+  "description": "Repository-aware application mentor"
+}
+
+###
+
+### Get the registered repository project by ID
+GET {{baseUrl}}/api/repository-projects/{{repositoryProjectId}}
+Accept: application/json
+
+###
+
+### Get a repository project that does not exist
+GET {{baseUrl}}/api/repository-projects/00000000-0000-0000-0000-000000000000
+Accept: application/json

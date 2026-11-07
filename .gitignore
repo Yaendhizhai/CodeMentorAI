@@ -1,0 +1,35 @@
+# Build outputs
+**/bin/
+**/obj/
+**/artifacts/
+**/TestResults/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/*
+!.vscode/extensions.json
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Secrets and environment configuration
+.env
+.env.*
+!.env.example
+**/appsettings.Development.json
+**/secrets.json
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# OS files
+Thumbs.db
+.DS_Store

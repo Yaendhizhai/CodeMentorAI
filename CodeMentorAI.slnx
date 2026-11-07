@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="CodeMentor.AI/CodeMentor.AI.csproj" />
+  <Project Path="CodeMentor.API/CodeMentor.API.csproj" />
+  <Project Path="CodeMentor.Application/CodeMentor.Application.csproj" />
+  <Project Path="CodeMentor.Core/CodeMentor.Core.csproj" />
+  <Project Path="CodeMentor.Enterprise/CodeMentor.Enterprise.csproj" />
+  <Project Path="CodeMentor.Infrastructure/CodeMentor.Infrastructure.csproj" />
+  <Project Path="CodeMentor.Tests/CodeMentor.Tests.csproj" />
+  <Project Path="CodeMentor.Worker/CodeMentor.Worker.csproj" />
+</Solution>
