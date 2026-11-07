@@ -417,5 +417,10 @@ public sealed class RepositoryProjectServiceTests
             LastCancellationToken = cancellationToken;
             return Task.FromResult(1);
         }
+
+        public Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default) =>
+            operation(cancellationToken);
     }
 }

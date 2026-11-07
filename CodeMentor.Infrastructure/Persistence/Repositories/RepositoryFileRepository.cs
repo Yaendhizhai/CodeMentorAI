@@ -6,6 +6,9 @@ namespace CodeMentor.Infrastructure.Persistence.Repositories;
 
 internal sealed class RepositoryFileRepository(CodeMentorDbContext dbContext) : IRepositoryFileRepository
 {
+    public Task<bool> HasAnyByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default) =>
+        dbContext.RepositoryFiles.AnyAsync(file => file.ProjectId == projectId, cancellationToken);
+
     public Task<RepositoryFile?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         dbContext.RepositoryFiles
             .AsNoTracking()

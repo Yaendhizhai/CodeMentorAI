@@ -30,7 +30,8 @@ public sealed class CodeChunk
         ChunkIndex = chunkIndex;
         StartLine = startLine;
         EndLine = endLine;
-        Content = EntityValidation.RequiredText(content, nameof(content), int.MaxValue);
+        ArgumentException.ThrowIfNullOrEmpty(content);
+        Content = content;
         CreatedAtUtc = DateTimeOffset.UtcNow;
     }
 

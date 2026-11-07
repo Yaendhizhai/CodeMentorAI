@@ -38,6 +38,9 @@ public sealed class RepositoryFile
 
     public string? Language { get; private set; }
 
+    /// <summary>
+    /// Source object identifier; for GitHub ingestion this is the Git blob SHA, not necessarily a SHA-256 digest.
+    /// </summary>
     public string? ContentHash { get; private set; }
 
     public long SizeInBytes { get; private set; }

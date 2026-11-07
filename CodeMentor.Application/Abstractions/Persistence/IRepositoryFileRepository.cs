@@ -4,6 +4,8 @@ namespace CodeMentor.Application.Abstractions.Persistence;
 
 public interface IRepositoryFileRepository
 {
+    Task<bool> HasAnyByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
+
     Task<RepositoryFile?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<RepositoryFile>> GetByProjectIdAsync(

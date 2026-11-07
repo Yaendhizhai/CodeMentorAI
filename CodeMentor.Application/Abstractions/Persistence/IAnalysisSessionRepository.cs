@@ -11,4 +11,6 @@ public interface IAnalysisSessionRepository
         CancellationToken cancellationToken = default);
 
     Task AddAsync(AnalysisSession session, CancellationToken cancellationToken = default);
+
+    void Update(AnalysisSession session);
 }

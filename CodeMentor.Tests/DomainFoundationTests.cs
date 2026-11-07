@@ -60,6 +60,61 @@ public sealed class DomainFoundationTests
     }
 
     [Fact]
+    public void AnalysisSession_TransitionsFromQueuedToRunningToCompleted()
+    {
+        var session = new AnalysisSession(Guid.NewGuid());
+        var startedAt = session.CreatedAtUtc.AddSeconds(1);
+        var completedAt = startedAt.AddSeconds(1);
+
+        session.MarkRunning(startedAt);
+        session.MarkCompleted(completedAt);
+
+        Assert.Equal(AnalysisSessionStatus.Completed, session.Status);
+        Assert.Equal(startedAt, session.StartedAtUtc);
+        Assert.Equal(completedAt, session.CompletedAtUtc);
+        Assert.Equal(TimeSpan.Zero, session.CreatedAtUtc.Offset);
+    }
+
+    [Fact]
+    public void AnalysisSession_RejectsInvalidStateTransitions()
+    {
+        var queued = new AnalysisSession(Guid.NewGuid());
+
+        Assert.Throws<InvalidOperationException>(() => queued.MarkCompleted(DateTimeOffset.UtcNow));
+        Assert.Throws<InvalidOperationException>(() => queued.MarkFailed(DateTimeOffset.UtcNow));
+        Assert.Throws<InvalidOperationException>(() => queued.MarkCancelled(DateTimeOffset.UtcNow));
+
+        queued.MarkRunning(queued.CreatedAtUtc.AddSeconds(1));
+        queued.MarkFailed(queued.StartedAtUtc!.Value.AddSeconds(1));
+
+        Assert.Throws<InvalidOperationException>(
+            () => queued.MarkRunning(queued.CompletedAtUtc!.Value.AddSeconds(1)));
+        Assert.Throws<InvalidOperationException>(
+            () => queued.MarkCompleted(queued.CompletedAtUtc.GetValueOrDefault().AddSeconds(1)));
+        Assert.Throws<InvalidOperationException>(
+            () => queued.MarkFailed(queued.CompletedAtUtc.GetValueOrDefault().AddSeconds(1)));
+        Assert.Throws<InvalidOperationException>(
+            () => queued.MarkCancelled(queued.CompletedAtUtc.GetValueOrDefault().AddSeconds(1)));
+    }
+
+    [Fact]
+    public void AnalysisSession_RequiresUtcAndNonRegressingTimestamps()
+    {
+        var session = new AnalysisSession(Guid.NewGuid());
+        var nonUtc = new DateTimeOffset(2026, 11, 7, 12, 0, 0, TimeSpan.FromHours(2));
+
+        Assert.Throws<ArgumentException>(() => session.MarkRunning(nonUtc));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => session.MarkRunning(session.CreatedAtUtc.AddTicks(-1)));
+
+        session.MarkRunning(session.CreatedAtUtc.AddSeconds(1));
+        Assert.Throws<ArgumentException>(
+            () => session.MarkCompleted(nonUtc));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => session.MarkCompleted(session.StartedAtUtc!.Value.AddTicks(-1)));
+    }
+
+    [Fact]
     public void DbContext_MapsAggregateRelationshipsAndUniqueIndexes()
     {
         var options = new DbContextOptionsBuilder<CodeMentorDbContext>()

@@ -25,4 +25,11 @@ internal sealed class AnalysisSessionRepository(CodeMentorDbContext dbContext) :
         ArgumentNullException.ThrowIfNull(session);
         await dbContext.AnalysisSessions.AddAsync(session, cancellationToken);
     }
+
+    public void Update(AnalysisSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        dbContext.AnalysisSessions.Attach(session);
+        dbContext.Entry(session).State = EntityState.Modified;
+    }
 }
