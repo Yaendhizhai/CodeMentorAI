@@ -56,6 +56,13 @@ public sealed class RepositoryProjectService(
         return project is null ? null : ToResponse(project);
     }
 
+    public async Task<IReadOnlyList<RepositoryProjectResponse>> GetAllAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var projects = await repository.GetAllAsync(cancellationToken);
+        return projects.Select(ToResponse).ToArray();
+    }
+
     private static RepositoryProjectResponse ToResponse(RepositoryProject project) =>
         new(
             project.Id,

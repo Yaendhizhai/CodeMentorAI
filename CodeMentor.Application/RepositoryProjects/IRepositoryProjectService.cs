@@ -9,4 +9,7 @@ public interface IRepositoryProjectService
     Task<RepositoryProjectResponse?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RepositoryProjectResponse>> GetAllAsync(
+        CancellationToken cancellationToken = default);
 }

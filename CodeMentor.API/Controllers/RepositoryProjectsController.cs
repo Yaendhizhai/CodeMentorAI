@@ -58,6 +58,18 @@ public sealed class RepositoryProjectsController(IRepositoryProjectService repos
         return project is null ? NotFound() : Ok(project);
     }
 
+    /// <summary>Gets all repository projects.</summary>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The repository projects, or an empty collection.</returns>
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<RepositoryProjectResponse>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<RepositoryProjectResponse>>> GetAll(
+        CancellationToken cancellationToken)
+    {
+        var projects = await repositoryProjectService.GetAllAsync(cancellationToken);
+        return Ok(projects);
+    }
+
     private ObjectResult CreateGitHubErrorProblem(GitHubRepositoryClientException exception)
     {
         var (statusCode, title, detail) = exception.Error switch

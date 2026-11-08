@@ -324,6 +324,132 @@ public sealed class RepositoryProjectServiceTests
         Assert.IsType<NotFoundResult>(result.Result);
     }
 
+    [Fact]
+    public async Task GetAllAsync_ReturnsMappedProjectsAndForwardsCancellationToken()
+    {
+        var projects = new[]
+        {
+            new RepositoryProject(
+                "First project",
+                "https://github.com/example/first",
+                "First description"),
+            new RepositoryProject(
+                "Second project",
+                "https://github.com/example/second",
+                "Second description")
+        };
+        var repository = new FakeRepositoryProjectRepository { Projects = projects };
+        var service = new RepositoryProjectService(
+            repository,
+            new FakeUnitOfWork(),
+            new FakeGitHubRepositoryClient());
+        using var cancellationSource = new CancellationTokenSource();
+
+        var responses = await service.GetAllAsync(cancellationSource.Token);
+
+        Assert.Equal(cancellationSource.Token, repository.LastGetAllCancellationToken);
+        Assert.Collection(
+            responses,
+            first =>
+            {
+                Assert.Equal(projects[0].Id, first.Id);
+                Assert.Equal(projects[0].Name, first.Name);
+                Assert.Equal(projects[0].RepositoryUrl, first.RepositoryUrl);
+                Assert.Equal(projects[0].Description, first.Description);
+                Assert.Equal(projects[0].CreatedAtUtc, first.CreatedAtUtc);
+                Assert.Equal(projects[0].UpdatedAtUtc, first.UpdatedAtUtc);
+            },
+            second =>
+            {
+                Assert.Equal(projects[1].Id, second.Id);
+                Assert.Equal(projects[1].Name, second.Name);
+                Assert.Equal(projects[1].RepositoryUrl, second.RepositoryUrl);
+                Assert.Equal(projects[1].Description, second.Description);
+                Assert.Equal(projects[1].CreatedAtUtc, second.CreatedAtUtc);
+                Assert.Equal(projects[1].UpdatedAtUtc, second.UpdatedAtUtc);
+            });
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsEmptyCollectionWhenNoProjectsExist()
+    {
+        var service = new RepositoryProjectService(
+            new FakeRepositoryProjectRepository(),
+            new FakeUnitOfWork(),
+            new FakeGitHubRepositoryClient());
+
+        var responses = await service.GetAllAsync();
+
+        Assert.Empty(responses);
+    }
+
+    [Fact]
+    public async Task GetAllEndpoint_ReturnsOkWithProjectCollection()
+    {
+        var projects = new[]
+        {
+            new RepositoryProject("Alpha", "https://github.com/example/alpha", "Alpha project"),
+            new RepositoryProject("Beta", null, null)
+        };
+        var repository = new FakeRepositoryProjectRepository { Projects = projects };
+        var service = new RepositoryProjectService(
+            repository,
+            new FakeUnitOfWork(),
+            new FakeGitHubRepositoryClient());
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services
+            .AddControllers()
+            .AddApplicationPart(typeof(RepositoryProjectsController).Assembly);
+        builder.Services.AddSingleton<IRepositoryProjectService>(service);
+
+        await using var app = builder.Build();
+        app.MapControllers();
+        await app.StartAsync();
+
+        try
+        {
+            var server = app.Services.GetRequiredService<IServer>();
+            var address = server.Features
+                .Get<IServerAddressesFeature>()?
+                .Addresses
+                .Single()
+                ?? throw new InvalidOperationException("The test server did not expose its listening address.");
+            using var client = new HttpClient { BaseAddress = new Uri(address) };
+
+            using var response = await client.GetAsync("/api/repository-projects");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var results = await response.Content.ReadFromJsonAsync<RepositoryProjectResponse[]>();
+            Assert.NotNull(results);
+            Assert.Collection(
+                results,
+                first =>
+                {
+                    Assert.Equal(projects[0].Id, first.Id);
+                    Assert.Equal(projects[0].Name, first.Name);
+                    Assert.Equal(projects[0].RepositoryUrl, first.RepositoryUrl);
+                    Assert.Equal(projects[0].Description, first.Description);
+                    Assert.Equal(projects[0].CreatedAtUtc, first.CreatedAtUtc);
+                    Assert.Equal(projects[0].UpdatedAtUtc, first.UpdatedAtUtc);
+                },
+                second =>
+                {
+                    Assert.Equal(projects[1].Id, second.Id);
+                    Assert.Equal(projects[1].Name, second.Name);
+                    Assert.Null(second.RepositoryUrl);
+                    Assert.Null(second.Description);
+                    Assert.Equal(projects[1].CreatedAtUtc, second.CreatedAtUtc);
+                    Assert.Equal(projects[1].UpdatedAtUtc, second.UpdatedAtUtc);
+                });
+            Assert.NotEqual(default, repository.LastGetAllCancellationToken);
+        }
+        finally
+        {
+            await app.StopAsync();
+        }
+    }
+
     private static RepositoryProjectsController CreateController(IRepositoryProjectService service) =>
         new(service)
         {
@@ -386,7 +512,11 @@ public sealed class RepositoryProjectServiceTests
     {
         public RepositoryProject? AddedProject { get; private set; }
 
+        public IReadOnlyList<RepositoryProject> Projects { get; init; } = [];
+
         public CancellationToken LastCancellationToken { get; private set; }
+
+        public CancellationToken LastGetAllCancellationToken { get; private set; }
 
         public Task<RepositoryProject?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
@@ -394,8 +524,11 @@ public sealed class RepositoryProjectServiceTests
             return Task.FromResult(AddedProject?.Id == id ? AddedProject : null);
         }
 
-        public Task<IReadOnlyList<RepositoryProject>> GetAllAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<RepositoryProject>>([]);
+        public Task<IReadOnlyList<RepositoryProject>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            LastGetAllCancellationToken = cancellationToken;
+            return Task.FromResult(Projects);
+        }
 
         public Task AddAsync(RepositoryProject project, CancellationToken cancellationToken = default)
         {

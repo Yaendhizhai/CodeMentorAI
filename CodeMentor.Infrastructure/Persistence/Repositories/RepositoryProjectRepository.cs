@@ -16,6 +16,7 @@ internal sealed class RepositoryProjectRepository(CodeMentorDbContext dbContext)
         await dbContext.RepositoryProjects
             .AsNoTracking()
             .OrderBy(project => project.Name)
+            .ThenBy(project => project.Id)
             .ToListAsync(cancellationToken);
 
     public async Task AddAsync(RepositoryProject project, CancellationToken cancellationToken = default)
