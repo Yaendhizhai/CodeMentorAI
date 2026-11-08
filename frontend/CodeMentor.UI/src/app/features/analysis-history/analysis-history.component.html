@@ -1,0 +1,20 @@
+<app-page-heading
+  eyebrow="Repository activity"
+  title="Analysis history"
+  description="Review ingestion and analysis sessions, their status, and timing."
+/>
+
+<app-feature-unavailable
+  title="Analysis session listing is not available"
+  description="Analysis sessions are tracked by the backend, but there is no endpoint to retrieve session history. No sample sessions or statuses are shown."
+  endpoint="GET /api/repository-projects/{id}/analysis-sessions"
+/>
+
+<section class="history-panel">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>REPOSITORY</th><th>SESSION</th><th>STATUS</th><th>STARTED</th><th>COMPLETED</th><th>DURATION</th></tr></thead>
+      <tbody><tr><td colspan="6"><div class="history-empty"><span>◷</span><strong>No session data to display</strong><small>Connect a history endpoint to load real analysis activity.</small></div></td></tr></tbody>
+    </table>
+  </div>
+</section>

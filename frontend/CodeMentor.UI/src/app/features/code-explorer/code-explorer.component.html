@@ -1,0 +1,31 @@
+<app-page-heading
+  eyebrow="Project-scoped lexical search"
+  title="Code Explorer"
+  description="Find code chunks by matching source text across an indexed repository."
+/>
+
+<app-feature-unavailable
+  title="Code search API endpoint not implemented"
+  description="The backend has a project-scoped lexical retrieval Application service, but no HTTP controller route exposes it yet. Search is disabled so the UI will not send requests to a guessed endpoint."
+  endpoint="POST /api/repository-projects/{id}/code-search"
+/>
+
+<section class="search-panel">
+  <div class="search-head"><span class="search-icon">⌕</span><div><h2>Search your codebase</h2><p>Search will be enabled once a controller exposes the retrieval service.</p></div></div>
+  <div class="search-row">
+    <label class="sr-only" for="code-query">Search query</label>
+    <input id="code-query" placeholder="Search for a class, method, or phrase…" disabled />
+    <label class="sr-only" for="repository-select">Repository</label>
+    <select id="repository-select" disabled><option>Select repository</option></select>
+    <label class="sr-only" for="result-limit">Result limit</label>
+    <select id="result-limit" disabled><option>10 results</option><option>25 results</option><option>50 results</option><option>100 results</option></select>
+    <button type="button" disabled>Search</button>
+  </div>
+  <div class="search-foot"><span>Lexical substring search</span><span>Project scoped</span><span>Evidence with file and line citations</span></div>
+</section>
+
+<section class="results-placeholder">
+  <div class="magnifier">⌕</div>
+  <h2>Search results will appear here</h2>
+  <p>No search request has been sent. The API route is not yet available.</p>
+</section>

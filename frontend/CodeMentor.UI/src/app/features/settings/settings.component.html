@@ -1,0 +1,22 @@
+<app-page-heading
+  eyebrow="Workspace preferences"
+  title="Settings"
+  description="Application and local development configuration."
+/>
+
+<div class="settings-grid">
+  <section class="settings-card">
+    <div class="settings-heading"><span class="settings-icon purple">⌘</span><div><h2>Application</h2><p>About this CodeMentor AI workspace</p></div></div>
+    <dl><div><dt>Product</dt><dd>CodeMentor AI</dd></div><div><dt>Frontend</dt><dd>Angular 22 · Standalone</dd></div><div><dt>Backend</dt><dd>ASP.NET Core · .NET 10</dd></div><div><dt>Mode</dt><dd><span class="mode-badge">Local development</span></dd></div></dl>
+  </section>
+  <section class="settings-card">
+    <div class="settings-heading"><span class="settings-icon blue">↗</span><div><h2>API connection</h2><p>Frontend API base configuration</p></div></div>
+    <label for="api-url">API base URL</label><input id="api-url" [value]="apiBaseUrl" readonly />
+    <p class="help-text">The Angular development proxy forwards <code>/api</code> to the local backend at <code>http://localhost:5269</code>.</p>
+    <div class="connection-note"><span></span> Connection is checked when a supported API request is made.</div>
+  </section>
+  <section class="settings-card theme-card">
+    <div class="settings-heading"><span class="settings-icon amber">☼</span><div><h2>Appearance</h2><p>Preferences saved in this browser</p></div></div>
+    <div class="theme-row"><span><strong>Dark theme preference</strong><small>Stores your preference locally; system-wide styling is not applied yet.</small></span><button type="button" role="switch" [attr.aria-checked]="darkTheme()" [class.on]="darkTheme()" (click)="toggleTheme()"><i></i></button></div>
+  </section>
+</div>

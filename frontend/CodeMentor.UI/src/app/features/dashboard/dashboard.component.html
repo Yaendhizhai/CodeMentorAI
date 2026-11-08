@@ -1,0 +1,66 @@
+<app-page-heading
+  eyebrow="Your engineering workspace"
+  title="Good to have you here."
+  description="A clear view into your repositories, code, and analysis activity."
+>
+  <a class="button button-primary" routerLink="/repositories"><span aria-hidden="true">＋</span> Add repository</a>
+</app-page-heading>
+
+<section class="welcome-card">
+  <div class="welcome-copy">
+    <div class="welcome-kicker"><span class="sparkle">✦</span> CODEBASE INTELLIGENCE</div>
+    <h2>Make your codebase<br /><span>easier to understand.</span></h2>
+    <p>Connect a public GitHub repository to build a searchable foundation for your next engineering question.</p>
+    <a class="button button-light" routerLink="/repositories">Connect a repository <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="welcome-art" aria-hidden="true">
+    <div class="code-window">
+      <div class="code-lines"><b>01</b><span class="syntax-purple">public</span> <span class="syntax-blue">class</span> <span>Repository</span></div>
+      <div class="code-lines"><b>02</b>&nbsp;&nbsp; <span class="syntax-purple">public async</span> Task</div>
+      <div class="code-lines"><b>03</b>&nbsp;&nbsp; {{ '{' }} <span class="syntax-green">// understand more</span></div>
+      <div class="code-lines"><b>04</b>&nbsp;&nbsp; {{ '}' }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-grid" aria-label="Workspace statistics">
+  <article class="stat-card">
+    <div class="stat-top"><span class="stat-icon purple">▤</span><span class="stat-label">Repositories</span></div>
+    <strong>—</strong><small>Available when listing API is added</small>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top"><span class="stat-icon blue">⌘</span><span class="stat-label">Indexed files</span></div>
+    <strong>—</strong><small>Not exposed by the current API</small>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top"><span class="stat-icon amber">▧</span><span class="stat-label">Code chunks</span></div>
+    <strong>—</strong><small>Not exposed by the current API</small>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top"><span class="stat-icon green">◷</span><span class="stat-label">Latest analysis</span></div>
+    <strong class="status-text">Not available</strong><small>Analysis history endpoint needed</small>
+  </article>
+</section>
+
+<div class="lower-grid">
+  <section class="panel activity-panel">
+    <div class="panel-heading"><div><h2>Recent activity</h2><p>Your latest repository analysis sessions</p></div><span class="panel-symbol">◷</span></div>
+    <div class="empty-activity">
+      <span class="empty-icon">⌁</span>
+      <strong>Activity will appear here</strong>
+      <p>Analysis session listing is not available in the current backend API.</p>
+    </div>
+  </section>
+  <section class="panel quick-panel">
+    <div class="panel-heading"><div><h2>Quick actions</h2><p>Pick up where you want to explore</p></div></div>
+    <a class="quick-action" routerLink="/repositories"><span class="quick-icon">＋</span><span><b>Register a repository</b><small>Connect a public GitHub project</small></span><i>→</i></a>
+    <a class="quick-action" routerLink="/explorer"><span class="quick-icon explorer">⌕</span><span><b>Explore code</b><small>Search indexed chunks when API is available</small></span><i>→</i></a>
+    <a class="quick-action" routerLink="/mentor"><span class="quick-icon mentor">✦</span><span><b>Ask the AI mentor</b><small>Chat becomes available with a backend endpoint</small></span><i>→</i></a>
+  </section>
+</div>
+
+<app-feature-unavailable
+  title="Repository and indexing totals are not available yet"
+  description="The API currently supports registering a repository and retrieving it by ID. It does not expose a repository list or aggregate statistics, so this dashboard does not invent counts."
+  endpoint="GET /api/repository-projects"
+/>

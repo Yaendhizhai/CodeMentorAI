@@ -1,0 +1,32 @@
+<app-page-heading
+  eyebrow="Evidence-grounded assistance"
+  title="AI Mentor"
+  description="Ask questions about your application architecture and get answers grounded in repository evidence."
+/>
+
+<app-feature-unavailable
+  title="AI Mentor is not connected to a chat API"
+  description="No conversation-history or message endpoint is currently implemented. This workspace is intentionally empty—no sample answers, messages, or source citations are fabricated."
+  endpoint="POST /api/conversations/{id}/messages"
+/>
+
+<section class="mentor-layout">
+  <aside class="conversation-list">
+    <div class="conversation-heading"><strong>Conversations</strong><span>0</span></div>
+    <div class="conversation-empty"><span>▤</span><p>Your conversations will appear here when chat is available.</p></div>
+  </aside>
+  <section class="chat-workspace" aria-label="AI conversation unavailable">
+    <div class="chat-empty">
+      <span class="mentor-mark">✦</span>
+      <h2>Understand your application, faster.</h2>
+      <p>Select a repository and ask a question. Answers will include file and line citations when this capability is connected.</p>
+      <div class="suggestion-row"><span>How does authentication work?</span><span>Where is the order flow?</span><span>Explain the main services</span></div>
+    </div>
+    <form class="chat-composer">
+      <label class="sr-only" for="mentor-message">Ask a question</label>
+      <textarea id="mentor-message" rows="2" placeholder="Ask a question about your codebase…" disabled></textarea>
+      <div><label class="sr-only" for="mentor-repository">Choose a repository</label><select id="mentor-repository" disabled><option>Choose a repository</option></select><button type="button" disabled aria-label="Send message">↑</button></div>
+    </form>
+    <small class="chat-footnote">AI responses and citations are unavailable until a backend conversation API exists.</small>
+  </section>
+</section>

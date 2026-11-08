@@ -1,0 +1,87 @@
+<app-page-heading
+  eyebrow="Repository workspace"
+  title="Repositories"
+  description="Register a public GitHub repository or open a project you already know by its ID."
+>
+  <span class="availability-pill"><span></span> Public GitHub repositories</span>
+</app-page-heading>
+
+<div class="repositories-grid">
+  <section class="panel register-panel">
+    <div class="section-title">
+      <span class="section-icon">＋</span>
+      <div><h2>Register a repository</h2><p>Connect a public GitHub project to CodeMentor AI.</p></div>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert alert-error" role="alert">
+        <strong>Registration failed</strong><span>{{ errorMessage() }}</span>
+        @for (entry of validationErrors() | keyvalue; track entry.key) {
+          @for (message of entry.value; track message) { <small>{{ entry.key }}: {{ message }}</small> }
+        }
+      </div>
+    }
+
+    @if (registeredProject(); as project) {
+      <div class="alert alert-success" role="status">
+        <div class="success-heading"><span>✓</span><strong>Repository registered</strong></div>
+        <p>{{ project.name }} is ready in your workspace.</p>
+        <div class="created-id">Project ID <code>{{ project.id }}</code></div>
+        <a class="button button-primary" [routerLink]="['/repositories', project.id]">View repository details <span>→</span></a>
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label for="repository-name">Repository name <span class="required">*</span></label>
+      <input id="repository-name" formControlName="name" autocomplete="organization" placeholder="e.g. Payments Platform" />
+      @if (form.controls.name.touched && form.controls.name.hasError('required')) {
+        <small class="field-error">Enter a display name.</small>
+      }
+      @if (form.controls.name.touched && form.controls.name.hasError('maxlength')) {
+        <small class="field-error">Name must be 200 characters or fewer.</small>
+      }
+
+      <label for="repository-url">Public GitHub URL <span class="required">*</span></label>
+      <div class="input-with-icon"><span aria-hidden="true">⌘</span><input id="repository-url" formControlName="repositoryUrl" autocomplete="url" placeholder="https://github.com/owner/repository" /></div>
+      <small class="field-hint">Use a repository URL hosted on github.com. Optional .git suffix is supported.</small>
+      @if (form.controls.repositoryUrl.touched && form.controls.repositoryUrl.hasError('required')) {
+        <small class="field-error">Enter a GitHub repository URL.</small>
+      }
+      @if (form.controls.repositoryUrl.touched && form.controls.repositoryUrl.hasError('pattern')) {
+        <small class="field-error">Enter a valid HTTPS GitHub repository URL.</small>
+      }
+
+      <label for="repository-description">Description <span class="optional">Optional</span></label>
+      <textarea id="repository-description" rows="3" formControlName="description" placeholder="What does this project do?"></textarea>
+      <div class="form-footer"><small>Up to 2,000 characters</small><button class="button button-primary" type="submit" [disabled]="busy()">
+        @if (busy()) { <span class="spinner"></span> Verifying… } @else { Register repository <span>→</span> }
+      </button></div>
+    </form>
+  </section>
+
+  <aside class="side-column">
+    <section class="panel lookup-panel">
+      <div class="section-title compact">
+        <span class="section-icon lookup">⌕</span>
+        <div><h2>Open a project</h2><p>Look up a registered repository by ID.</p></div>
+      </div>
+      <label for="project-id">Repository project ID</label>
+      <input id="project-id" [value]="lookupId()" (input)="updateLookupId($event)" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+      @if (lookupError()) { <div class="field-error lookup-error" role="alert">{{ lookupError() }}</div> }
+      <button class="button button-secondary full-width" type="button" [disabled]="lookupBusy()" (click)="openById()">
+        @if (lookupBusy()) { <span class="spinner dark"></span> Looking up… } @else { Find repository }
+      </button>
+    </section>
+
+    <section class="info-card">
+      <span class="info-mark">i</span>
+      <div><strong>Repository listing is not available</strong><p>The API supports registration and lookup by ID, but does not yet expose a list endpoint. Newly registered details appear here after a successful response.</p></div>
+    </section>
+  </aside>
+</div>
+
+<app-feature-unavailable
+  title="Repository inventory endpoint not implemented"
+  description="Existing projects cannot be listed automatically yet. Use the project ID returned at registration to open details."
+  endpoint="GET /api/repository-projects"
+/>

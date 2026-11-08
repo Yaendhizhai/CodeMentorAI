@@ -1,0 +1,69 @@
+<div class="app-shell" [class.sidebar-open]="sidebarOpen()">
+  <button
+    class="sidebar-scrim"
+    type="button"
+    aria-label="Close navigation"
+    (click)="closeSidebar()"
+  ></button>
+
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" routerLink="/" (click)="closeSidebar()">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="brand-copy"><strong>CodeMentor</strong><small>AI workspace</small></span>
+    </a>
+
+    <div class="nav-label">WORKSPACE</div>
+    <nav id="primary-navigation" class="navigation">
+      @for (item of primaryNavigation; track item.path) {
+        <a
+          class="nav-link"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+          (click)="closeSidebar()"
+        >
+          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+          @if (item.path === '/mentor') {
+            <span class="nav-badge">Preview</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-note">
+      <span class="note-icon" aria-hidden="true">✦</span>
+      <strong>Understand your codebase</strong>
+      <p>Connect a public repository to start exploring its architecture.</p>
+      <a routerLink="/repositories" (click)="closeSidebar()">Add a repository <span aria-hidden="true">→</span></a>
+    </div>
+    <a class="nav-link settings-link" routerLink="/settings" routerLinkActive="active" (click)="closeSidebar()">
+      <span class="nav-icon" aria-hidden="true">⚙</span><span>Settings</span>
+    </a>
+    <div class="sidebar-footer"><span class="status-dot"></span> Local workspace</div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <button
+        class="menu-button"
+        type="button"
+        aria-label="Toggle navigation"
+        aria-controls="primary-navigation"
+        [attr.aria-expanded]="sidebarOpen()"
+        (click)="toggleSidebar()"
+      >☰</button>
+      <div class="breadcrumbs">
+        <span>Workspace</span><span class="crumb-divider">/</span><strong>{{ pageTitle() }}</strong>
+      </div>
+      <div class="topbar-actions">
+        <span class="api-indicator"><span class="status-dot"></span> API configured</span>
+        <span class="avatar" aria-label="Developer profile">D</span>
+      </div>
+    </header>
+    <main id="main-content" class="main-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

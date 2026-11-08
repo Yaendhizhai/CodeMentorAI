@@ -1,0 +1,55 @@
+<app-page-heading
+  eyebrow="Repository overview"
+  [title]="project()?.name ?? 'Repository details'"
+  description="Registration details from the CodeMentor AI API."
+>
+  <a class="button button-secondary" routerLink="/repositories">← Repositories</a>
+</app-page-heading>
+
+@if (loading()) {
+  <section class="panel loading-card" aria-live="polite"><span class="large-spinner"></span><span>Loading repository details…</span></section>
+} @else if (error()) {
+  <section class="panel error-card" role="alert"><span class="error-mark">!</span><div><h2>Could not load repository</h2><p>{{ error() }}</p><a routerLink="/repositories">Back to repositories</a></div></section>
+} @else if (project(); as repository) {
+  <section class="repository-banner">
+    <div class="repo-avatar" aria-hidden="true">⌘</div>
+    <div class="repo-main">
+      <div class="repo-title-row"><h2>{{ repository.name }}</h2><span class="status-pill registered"><i></i> Registered</span></div>
+      @if (repository.repositoryUrl) {
+        <a class="repo-url" [href]="repository.repositoryUrl" target="_blank" rel="noopener noreferrer">{{ repository.repositoryUrl }} <span aria-hidden="true">↗</span></a>
+      } @else { <span class="repo-url muted">No remote URL attached</span> }
+      @if (repository.description) { <p>{{ repository.description }}</p> }
+    </div>
+    <span class="repo-type">PUBLIC REPOSITORY</span>
+  </section>
+
+  <section class="metrics-grid">
+    <article class="metric-card"><span class="metric-symbol files">▤</span><small>Indexed files</small><strong>—</strong><span>Not available from API</span></article>
+    <article class="metric-card"><span class="metric-symbol chunks">▧</span><small>Code chunks</small><strong>—</strong><span>Not available from API</span></article>
+    <article class="metric-card"><span class="metric-symbol history">◷</span><small>Latest analysis</small><strong class="unknown">Unknown</strong><span>Session endpoint unavailable</span></article>
+  </section>
+
+  <div class="details-grid">
+    <section class="panel metadata-panel">
+      <div class="panel-title"><span class="title-mark">i</span><div><h2>Repository information</h2><p>Details recorded at registration</p></div></div>
+      <dl>
+        <div><dt>Project ID</dt><dd class="id-value">{{ repository.id }}</dd></div>
+        <div><dt>Registered</dt><dd>{{ repository.createdAtUtc | date:'medium' }}</dd></div>
+        <div><dt>Last updated</dt><dd>{{ repository.updatedAtUtc | date:'medium' }}</dd></div>
+        <div><dt>Ingestion status</dt><dd><span class="status-pill pending">Not available</span></dd></div>
+      </dl>
+    </section>
+    <section class="panel action-panel">
+      <div class="panel-title"><span class="title-mark purple">✦</span><div><h2>Next steps</h2><p>Ingestion and analysis actions</p></div></div>
+      <p class="action-copy">This repository is registered. Ingestion is not exposed through the current API, so no action is available yet.</p>
+      <button class="button button-disabled" type="button" disabled title="An ingestion API endpoint is not available">Start repository ingestion <span aria-hidden="true">↗</span></button>
+      <a class="secondary-link" routerLink="/explorer">Open Code Explorer <span>→</span></a>
+    </section>
+  </div>
+}
+
+<app-feature-unavailable
+  title="Ingestion and session details are not exposed by the API"
+  description="The application service exists, but no HTTP endpoint currently triggers ingestion or lists analysis sessions. This page does not imply ingestion has run."
+  endpoint="POST /api/repository-projects/{id}/ingestions"
+/>

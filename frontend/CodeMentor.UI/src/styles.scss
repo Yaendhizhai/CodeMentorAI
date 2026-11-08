@@ -1,0 +1,15 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  background: #f7f8fb;
+  color: #252d48;
+}
+
+* { box-sizing: border-box; }
+body { background: #f7f8fb; margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid #9a95f5; outline-offset: 2px; }
+::selection { background: #dedcff; }
