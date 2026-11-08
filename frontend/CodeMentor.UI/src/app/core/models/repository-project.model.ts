@@ -13,6 +13,15 @@ export interface RegisterRepositoryProjectRequest {
   readonly description: string | null;
 }
 
+export interface RepositoryIngestionResponse {
+  readonly analysisSessionId: string;
+  readonly repositoryProjectId: string;
+  readonly treeSha: string;
+  readonly fileCount: number;
+  readonly chunkCount: number;
+  readonly completedAtUtc: string;
+}
+
 export interface ApiProblemDetails {
   readonly title?: string;
   readonly detail?: string;

@@ -22,20 +22,44 @@
   } @else {
     <div class="repository-items">
       @for (project of projects(); track project.id) {
-        <a class="repository-item" [routerLink]="['/repositories', project.id]">
-          <span class="repository-symbol" aria-hidden="true">⌘</span>
-          <span class="repository-copy">
-            <strong>{{ project.name }}</strong>
-            @if (project.repositoryUrl) {
-              <span class="repository-url">{{ project.repositoryUrl }}</span>
-            }
-            @if (project.description) {
-              <span class="repository-description">{{ project.description }}</span>
-            }
-          </span>
-          <span class="repository-date">Added {{ project.createdAtUtc | date:'mediumDate' }}</span>
-          <span class="repository-open" aria-hidden="true">→</span>
-        </a>
+        <article class="repository-item">
+          <a class="repository-link" [routerLink]="['/repositories', project.id]">
+            <span class="repository-symbol" aria-hidden="true">⌘</span>
+            <span class="repository-copy">
+              <strong>{{ project.name }}</strong>
+              @if (project.repositoryUrl) {
+                <span class="repository-url">{{ project.repositoryUrl }}</span>
+              }
+              @if (project.description) {
+                <span class="repository-description">{{ project.description }}</span>
+              }
+              <span class="repository-date">Added {{ project.createdAtUtc | date:'mediumDate' }}</span>
+            </span>
+            <span class="repository-open" aria-hidden="true">→</span>
+          </a>
+          <div class="repository-actions">
+            <button
+              class="button button-primary ingest-button"
+              type="button"
+              [disabled]="ingestingRepositoryIds().has(project.id)"
+              [attr.aria-label]="ingestingRepositoryIds().has(project.id) ? 'Ingesting ' + project.name : 'Ingest ' + project.name"
+              [attr.aria-busy]="ingestingRepositoryIds().has(project.id)"
+              (click)="ingestRepository.emit(project.id)"
+            >
+              @if (ingestingRepositoryIds().has(project.id)) {
+                <span class="spinner light"></span> Ingesting…
+              } @else { Ingest }
+            </button>
+          </div>
+          @if (ingestionErrors()[project.id]; as ingestionError) {
+            <div class="ingestion-feedback ingestion-error" role="alert">{{ ingestionError }}</div>
+          } @else if (ingestionResults()[project.id]; as ingestionResult) {
+            <div class="ingestion-feedback ingestion-success" role="status">
+              Ingested {{ ingestionResult.fileCount }} files and {{ ingestionResult.chunkCount }} chunks.
+              Session <code>{{ ingestionResult.analysisSessionId }}</code>
+            </div>
+          }
+        </article>
       }
     </div>
   }

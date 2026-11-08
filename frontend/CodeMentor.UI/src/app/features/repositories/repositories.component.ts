@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { KeyValuePipe } from '@angular/common';
@@ -5,7 +6,10 @@ import { RouterLink, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { RepositoryApiService } from '../../core/services/repository-api.service';
-import { RepositoryProject } from '../../core/models/repository-project.model';
+import {
+  RepositoryIngestionResponse,
+  RepositoryProject,
+} from '../../core/models/repository-project.model';
 import { PageHeadingComponent } from '../../shared/components/page-heading.component';
 import { RepositoryProjectListComponent } from './repository-project-list.component';
 
@@ -33,6 +37,9 @@ export class RepositoriesComponent {
   protected readonly projects = signal<readonly RepositoryProject[]>([]);
   protected readonly projectsLoading = signal(true);
   protected readonly projectsError = signal('');
+  protected readonly ingestingRepositoryIds = signal<ReadonlySet<string>>(new Set<string>());
+  protected readonly ingestionResults = signal<Readonly<Record<string, RepositoryIngestionResponse>>>({});
+  protected readonly ingestionErrors = signal<Readonly<Record<string, string>>>({});
 
   protected readonly form = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(200)]],
@@ -119,5 +126,66 @@ export class RepositoriesComponent {
           this.projectsLoading.set(false);
         },
       });
+  }
+
+  protected ingestRepository(repositoryProjectId: string): void {
+    if (this.ingestingRepositoryIds().has(repositoryProjectId)) {
+      return;
+    }
+
+    this.ingestingRepositoryIds.update((ids) => new Set(ids).add(repositoryProjectId));
+    this.ingestionErrors.update((errors) => this.withoutKey(errors, repositoryProjectId));
+    this.ingestionResults.update((results) => this.withoutKey(results, repositoryProjectId));
+    this.repositoryApi
+      .ingest(repositoryProjectId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.ingestionResults.update((results) => ({
+            ...results,
+            [repositoryProjectId]: result,
+          }));
+          this.finishIngestion(repositoryProjectId);
+          this.refreshProjects();
+        },
+        error: (error: unknown) => {
+          this.ingestionErrors.update((errors) => ({
+            ...errors,
+            [repositoryProjectId]: this.ingestionErrorMessage(error),
+          }));
+          this.finishIngestion(repositoryProjectId);
+        },
+      });
+  }
+
+  private finishIngestion(repositoryProjectId: string): void {
+    this.ingestingRepositoryIds.update((ids) => {
+      const updated = new Set(ids);
+      updated.delete(repositoryProjectId);
+      return updated;
+    });
+  }
+
+  private ingestionErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 409) {
+        return 'This repository has already been ingested.';
+      }
+
+      if (error.status === 413) {
+        return 'This repository exceeds the ingestion size or file limits.';
+      }
+
+      if (error.status === 422) {
+        return 'This repository does not have a valid public GitHub URL.';
+      }
+    }
+
+    return this.apiErrors.message(error);
+  }
+
+  private withoutKey<T>(values: Readonly<Record<string, T>>, key: string): Readonly<Record<string, T>> {
+    const { [key]: _removed, ...remaining } = values;
+    return remaining;
   }
 }

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { RepositoryApiService } from './repository-api.service';
-import { RepositoryProject } from '../models/repository-project.model';
+import { RepositoryIngestionResponse, RepositoryProject } from '../models/repository-project.model';
 
 describe('RepositoryApiService', () => {
   let service: RepositoryApiService;
@@ -80,6 +80,27 @@ describe('RepositoryApiService', () => {
 
     const apiRequest = http.expectOne('/api/repository-projects');
     expect(apiRequest.request.method).toBe('GET');
+    apiRequest.flush(expected);
+    expect(response).toEqual(expected);
+  });
+
+  it('ingests the selected repository and returns the typed result', () => {
+    const id = '00e3ec8f-870d-4c7a-b922-9e792fb932ce';
+    const expected: RepositoryIngestionResponse = {
+      analysisSessionId: '10e3ec8f-870d-4c7a-b922-9e792fb932ce',
+      repositoryProjectId: id,
+      treeSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      fileCount: 4,
+      chunkCount: 7,
+      completedAtUtc: '2026-01-02T03:04:05Z',
+    };
+    let response: RepositoryIngestionResponse | undefined;
+
+    service.ingest(id).subscribe((result) => (response = result));
+
+    const apiRequest = http.expectOne(`/api/repository-projects/${id}/ingest`);
+    expect(apiRequest.request.method).toBe('POST');
+    expect(apiRequest.request.body).toBeNull();
     apiRequest.flush(expected);
     expect(response).toEqual(expected);
   });

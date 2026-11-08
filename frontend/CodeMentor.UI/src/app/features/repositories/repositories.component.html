@@ -80,5 +80,9 @@
   [projects]="projects()"
   [loading]="projectsLoading()"
   [error]="projectsError()"
+  [ingestingRepositoryIds]="ingestingRepositoryIds()"
+  [ingestionResults]="ingestionResults()"
+  [ingestionErrors]="ingestionErrors()"
   (refresh)="refreshProjects()"
+  (ingestRepository)="ingestRepository($event)"
 />

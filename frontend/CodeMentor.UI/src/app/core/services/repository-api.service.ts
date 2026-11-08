@@ -2,7 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { RegisterRepositoryProjectRequest, RepositoryProject } from '../models/repository-project.model';
+import {
+  RegisterRepositoryProjectRequest,
+  RepositoryIngestionResponse,
+  RepositoryProject,
+} from '../models/repository-project.model';
 
 @Injectable({ providedIn: 'root' })
 export class RepositoryApiService {
@@ -19,5 +23,12 @@ export class RepositoryApiService {
 
   getById(id: string): Observable<RepositoryProject> {
     return this.http.get<RepositoryProject>(`${this.projectsUrl}/${encodeURIComponent(id)}`);
+  }
+
+  ingest(id: string): Observable<RepositoryIngestionResponse> {
+    return this.http.post<RepositoryIngestionResponse>(
+      `${this.projectsUrl}/${encodeURIComponent(id)}/ingest`,
+      null,
+    );
   }
 }

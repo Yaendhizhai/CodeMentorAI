@@ -105,7 +105,7 @@ describe('RepositoriesComponent', () => {
     expect(host.textContent).toContain('https://github.com/acme/commerce');
     expect(host.textContent).toContain('Commerce services');
     expect(host.textContent).toContain('Jan 1, 2026');
-    const detailsLink = host.querySelector('.repository-item') as HTMLAnchorElement;
+    const detailsLink = host.querySelector('.repository-link') as HTMLAnchorElement;
     expect(detailsLink.getAttribute('href')).toBe('/repositories/00e3ec8f-870d-4c7a-b922-9e792fb932ce');
   });
 
@@ -142,6 +142,93 @@ describe('RepositoriesComponent', () => {
     refreshRequest.flush([]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No repositories registered yet');
+  });
+
+  it('ingests a repository, prevents duplicate clicks, shows success, and refreshes the list', () => {
+    const fixture = TestBed.createComponent(RepositoriesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/repository-projects').flush([createProject({ name: 'Commerce' })]);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const ingestButton = host.querySelector('.ingest-button') as HTMLButtonElement;
+    ingestButton.click();
+    fixture.detectChanges();
+    expect(ingestButton.disabled).toBe(true);
+    expect(ingestButton.textContent).toContain('Ingesting');
+    ingestButton.click();
+
+    const ingestionRequest = http.expectOne(
+      '/api/repository-projects/00e3ec8f-870d-4c7a-b922-9e792fb932ce/ingest',
+    );
+    expect(ingestionRequest.request.method).toBe('POST');
+    expect(ingestionRequest.request.body).toBeNull();
+    ingestionRequest.flush({
+      analysisSessionId: '10e3ec8f-870d-4c7a-b922-9e792fb932ce',
+      repositoryProjectId: '00e3ec8f-870d-4c7a-b922-9e792fb932ce',
+      treeSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      fileCount: 4,
+      chunkCount: 7,
+      completedAtUtc: '2026-01-02T03:04:05Z',
+    });
+    fixture.detectChanges();
+
+    const refreshRequest = http.expectOne('/api/repository-projects');
+    expect(refreshRequest.request.method).toBe('GET');
+    refreshRequest.flush([createProject({ name: 'Commerce' })]);
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Ingested 4 files and 7 chunks.');
+    expect(host.textContent).toContain('10e3ec8f-870d-4c7a-b922-9e792fb932ce');
+  });
+
+  it('shows clear conflict feedback when a repository was already ingested', () => {
+    const fixture = TestBed.createComponent(RepositoriesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/repository-projects').flush([createProject()]);
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.ingest-button') as HTMLButtonElement).click();
+    http.expectOne('/api/repository-projects/00e3ec8f-870d-4c7a-b922-9e792fb932ce/ingest').flush(
+      { title: 'Repository already ingested', detail: 'This repository project has already been ingested.' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('This repository has already been ingested.');
+  });
+
+  it('shows clear size-limit feedback when ingestion returns 413', () => {
+    const fixture = TestBed.createComponent(RepositoriesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/repository-projects').flush([createProject()]);
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.ingest-button') as HTMLButtonElement).click();
+    http.expectOne('/api/repository-projects/00e3ec8f-870d-4c7a-b922-9e792fb932ce/ingest').flush(
+      { title: 'Repository exceeds ingestion limits', detail: 'The repository exceeds ingestion limits.' },
+      { status: 413, statusText: 'Payload Too Large' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'This repository exceeds the ingestion size or file limits.',
+    );
+  });
+
+  it('shows API problem details for general ingestion failures', () => {
+    const fixture = TestBed.createComponent(RepositoriesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/repository-projects').flush([createProject()]);
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.ingest-button') as HTMLButtonElement).click();
+    http.expectOne('/api/repository-projects/00e3ec8f-870d-4c7a-b922-9e792fb932ce/ingest').flush(
+      { title: 'GitHub ingestion failed', detail: 'The repository could not be retrieved from GitHub.' },
+      { status: 502, statusText: 'Bad Gateway' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('The repository could not be retrieved from GitHub.');
   });
 });
 

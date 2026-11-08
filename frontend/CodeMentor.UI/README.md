@@ -48,8 +48,9 @@ The backend currently exposes:
 - `POST /api/repository-projects` — register a public GitHub repository.
 - `GET /api/repository-projects` — list registered repository projects.
 - `GET /api/repository-projects/{id}` — retrieve one repository project.
+- `POST /api/repository-projects/{id}/ingest` — synchronously ingest a registered repository. Use the **Ingest** action on its repository-list row; the UI displays the returned file/chunk counts and refreshes the list. Existing ingested repositories return a conflict, and repositories beyond ingestion limits show a size-limit message.
 
-The UI does not pretend unavailable endpoints exist: ingestion trigger, analysis-session history, HTTP code retrieval, and AI conversation endpoints are currently unavailable. Corresponding pages explain the missing API capability and do not fabricate results or citations.
+The UI does not pretend unavailable endpoints exist: analysis-session history, HTTP code retrieval, and AI conversation endpoints are currently unavailable. Corresponding pages explain the missing API capability and do not fabricate results or citations.
 
 ## Structure
 
