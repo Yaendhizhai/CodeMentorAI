@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CodeMentor.Application.GitHub;
+using CodeMentor.Application.RepositoryIngestion;
 using CodeMentor.Application.RepositoryProjects;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,9 +8,14 @@ namespace CodeMentor.API.Controllers;
 
 [ApiController]
 [Route("api/repository-projects")]
-public sealed class RepositoryProjectsController(IRepositoryProjectService repositoryProjectService)
+public sealed class RepositoryProjectsController(
+    IRepositoryProjectService repositoryProjectService,
+    IRepositoryIngestionService repositoryIngestionService)
     : ControllerBase
 {
+    private const string AlreadyIngestedErrorMessage =
+        "The repository project has already been ingested.";
+
     /// <summary>Registers a repository project.</summary>
     /// <param name="request">The repository project details.</param>
     /// <param name="cancellationToken">The request cancellation token.</param>
@@ -68,6 +74,91 @@ public sealed class RepositoryProjectsController(IRepositoryProjectService repos
     {
         var projects = await repositoryProjectService.GetAllAsync(cancellationToken);
         return Ok(projects);
+    }
+
+    /// <summary>Ingests a repository project's source files and code chunks.</summary>
+    /// <param name="id">The repository project ID.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The completed repository ingestion result.</returns>
+    [HttpPost("{id:guid}/ingest")]
+    [ProducesResponseType<RepositoryIngestionResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<RepositoryIngestionResponse>> Ingest(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await repositoryIngestionService.IngestAsync(id, cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Problem(
+                title: "Repository project not found",
+                detail: "The requested repository project does not exist.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+        catch (InvalidOperationException exception) when (
+            string.Equals(exception.Message, AlreadyIngestedErrorMessage, StringComparison.Ordinal))
+        {
+            return Problem(
+                title: "Repository already ingested",
+                detail: "This repository project has already been ingested.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+        catch (ValidationException)
+        {
+            return Problem(
+                title: "Invalid repository configuration",
+                detail: "The repository project does not have a valid public GitHub URL.",
+                statusCode: StatusCodes.Status422UnprocessableEntity);
+        }
+        catch (ArgumentException)
+        {
+            return Problem(
+                title: "Invalid repository project ID",
+                detail: "A valid repository project ID is required.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+        catch (GitHubRepositoryClientException exception)
+        {
+            return CreateIngestionGitHubErrorProblem(exception);
+        }
+    }
+
+    private ObjectResult CreateIngestionGitHubErrorProblem(GitHubRepositoryClientException exception)
+    {
+        if (exception.Error == GitHubRepositoryClientError.RateLimited)
+        {
+            return CreateGitHubErrorProblem(exception);
+        }
+
+        var (statusCode, title, detail) = exception.Error switch
+        {
+            GitHubRepositoryClientError.TreeTooLarge or
+            GitHubRepositoryClientError.TreeTruncated or
+            GitHubRepositoryClientError.TooManyFiles or
+            GitHubRepositoryClientError.FileTooLarge or
+            GitHubRepositoryClientError.TotalDownloadTooLarge or
+            GitHubRepositoryClientError.ResponseTooLarge =>
+                (StatusCodes.Status413PayloadTooLarge, "Repository exceeds ingestion limits",
+                    "The repository contains more source data than can be ingested in one operation."),
+            _ =>
+                (StatusCodes.Status502BadGateway, "GitHub ingestion failed",
+                    "The repository could not be retrieved from GitHub.")
+        };
+
+        return Problem(
+            title: title,
+            detail: detail,
+            statusCode: statusCode);
     }
 
     private ObjectResult CreateGitHubErrorProblem(GitHubRepositoryClientException exception)

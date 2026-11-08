@@ -28,3 +28,9 @@ Accept: application/json
 ### Get a repository project that does not exist
 GET {{baseUrl}}/api/repository-projects/00000000-0000-0000-0000-000000000000
 Accept: application/json
+
+###
+
+### Ingest a repository project
+POST {{baseUrl}}/api/repository-projects/{{repositoryProjectId}}/ingest
+Accept: application/json

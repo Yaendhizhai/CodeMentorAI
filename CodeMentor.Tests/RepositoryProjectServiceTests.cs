@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using CodeMentor.Application.Abstractions.Persistence;
 using CodeMentor.Application.GitHub;
+using CodeMentor.Application.RepositoryIngestion;
 using CodeMentor.Application.RepositoryProjects;
 using CodeMentor.Core.Entities;
 using Microsoft.AspNetCore.Http;
@@ -257,6 +258,227 @@ public sealed class RepositoryProjectServiceTests
     }
 
     [Fact]
+    public async Task Ingest_ReturnsOkWithIngestionResponse()
+    {
+        var expected = CreateIngestionResponse();
+        var ingestionService = new FakeRepositoryIngestionService { Response = expected };
+        var controller = CreateController(
+            new FakeRepositoryProjectService(),
+            ingestionService);
+
+        var result = await controller.Ingest(expected.RepositoryProjectId, CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Same(expected, okResult.Value);
+        Assert.Equal(StatusCodes.Status200OK, okResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task Ingest_ReturnsNotFoundWhenProjectDoesNotExist()
+    {
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = new KeyNotFoundException("sensitive project detail")
+        });
+
+        var result = await controller.Ingest(Guid.NewGuid(), CancellationToken.None);
+
+        AssertIngestionProblem(result.Result, StatusCodes.Status404NotFound, "sensitive project detail");
+    }
+
+    [Fact]
+    public async Task Ingest_ReturnsConflictWhenProjectWasAlreadyIngested()
+    {
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = new InvalidOperationException("The repository project has already been ingested.")
+        });
+
+        var result = await controller.Ingest(Guid.NewGuid(), CancellationToken.None);
+
+        var problemResult = Assert.IsType<ObjectResult>(result.Result);
+        var problem = Assert.IsType<ProblemDetails>(problemResult.Value);
+        Assert.Equal(StatusCodes.Status409Conflict, problemResult.StatusCode);
+        Assert.Equal(StatusCodes.Status409Conflict, problem.Status);
+        Assert.Equal("This repository project has already been ingested.", problem.Detail);
+    }
+
+    [Fact]
+    public async Task Ingest_PropagatesUnexpectedInvalidOperationException()
+    {
+        var exception = new InvalidOperationException("unexpected persistence failure");
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = exception
+        });
+
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => controller.Ingest(Guid.NewGuid(), CancellationToken.None));
+
+        Assert.Same(exception, actual);
+    }
+
+    [Fact]
+    public async Task Ingest_ReturnsUnprocessableEntityForInvalidStoredRepositoryUrl()
+    {
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = new ValidationException("sensitive repository detail")
+        });
+
+        var result = await controller.Ingest(Guid.NewGuid(), CancellationToken.None);
+
+        AssertIngestionProblem(result.Result, StatusCodes.Status422UnprocessableEntity, "sensitive repository detail");
+    }
+
+    [Fact]
+    public async Task Ingest_ReturnsBadRequestForInvalidProjectId()
+    {
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = new ArgumentException("sensitive argument detail")
+        });
+
+        var result = await controller.Ingest(Guid.Empty, CancellationToken.None);
+
+        AssertIngestionProblem(result.Result, StatusCodes.Status400BadRequest, "sensitive argument detail");
+    }
+
+    [Theory]
+    [InlineData(GitHubRepositoryClientError.ServerError)]
+    [InlineData(GitHubRepositoryClientError.NotFound)]
+    [InlineData(GitHubRepositoryClientError.NotPublic)]
+    [InlineData(GitHubRepositoryClientError.InvalidResponse)]
+    public async Task Ingest_ReturnsBadGatewayForOtherGitHubErrors(GitHubRepositoryClientError error)
+    {
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = new GitHubRepositoryClientException(error, "sensitive upstream detail")
+        });
+
+        var result = await controller.Ingest(Guid.NewGuid(), CancellationToken.None);
+
+        AssertIngestionProblem(result.Result, StatusCodes.Status502BadGateway, "sensitive upstream detail");
+    }
+
+    [Theory]
+    [InlineData(GitHubRepositoryClientError.TreeTooLarge)]
+    [InlineData(GitHubRepositoryClientError.TreeTruncated)]
+    [InlineData(GitHubRepositoryClientError.TooManyFiles)]
+    [InlineData(GitHubRepositoryClientError.FileTooLarge)]
+    [InlineData(GitHubRepositoryClientError.TotalDownloadTooLarge)]
+    [InlineData(GitHubRepositoryClientError.ResponseTooLarge)]
+    public async Task Ingest_ReturnsPayloadTooLargeForIngestionLimitErrors(GitHubRepositoryClientError error)
+    {
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = new GitHubRepositoryClientException(error, "sensitive upstream detail")
+        });
+
+        var result = await controller.Ingest(Guid.NewGuid(), CancellationToken.None);
+
+        AssertIngestionProblem(result.Result, StatusCodes.Status413PayloadTooLarge, "sensitive upstream detail");
+    }
+
+    [Fact]
+    public async Task Ingest_ReturnsServiceUnavailableAndRetryAfterForGitHubRateLimit()
+    {
+        var retryAt = DateTimeOffset.UtcNow.AddMinutes(2);
+        var resetAt = DateTimeOffset.UtcNow.AddMinutes(3);
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = new GitHubRepositoryClientException(
+                GitHubRepositoryClientError.RateLimited,
+                "sensitive upstream detail",
+                retryAfterDelay: TimeSpan.FromSeconds(90),
+                retryAfterAtUtc: retryAt,
+                rateLimitResetAtUtc: resetAt)
+        });
+
+        var result = await controller.Ingest(Guid.NewGuid(), CancellationToken.None);
+
+        var problemResult = Assert.IsType<ObjectResult>(result.Result);
+        var problem = Assert.IsType<ProblemDetails>(problemResult.Value);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, problemResult.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, problem.Status);
+        Assert.DoesNotContain("sensitive upstream detail", problem.Detail);
+        Assert.Equal(90d, problem.Extensions["retryAfterSeconds"]);
+        Assert.Equal(retryAt, problem.Extensions["retryAfterAtUtc"]);
+        Assert.Equal(resetAt, problem.Extensions["rateLimitResetAtUtc"]);
+        Assert.Equal("90", controller.Response.Headers["Retry-After"]);
+    }
+
+    [Fact]
+    public async Task Ingest_ForwardsCancellationTokenUnchanged()
+    {
+        var ingestionService = new FakeRepositoryIngestionService();
+        var controller = CreateController(ingestionService);
+        using var cancellationSource = new CancellationTokenSource();
+
+        await controller.Ingest(Guid.NewGuid(), cancellationSource.Token);
+
+        Assert.Equal(cancellationSource.Token, ingestionService.LastCancellationToken);
+    }
+
+    [Fact]
+    public async Task Ingest_PropagatesCancellation()
+    {
+        using var cancellationSource = new CancellationTokenSource();
+        var cancellation = new OperationCanceledException(cancellationSource.Token);
+        var controller = CreateController(new FakeRepositoryIngestionService
+        {
+            ExceptionToThrow = cancellation
+        });
+
+        var actual = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => controller.Ingest(Guid.NewGuid(), cancellationSource.Token));
+
+        Assert.Same(cancellation, actual);
+    }
+
+    [Fact]
+    public async Task IngestEndpoint_Returns200WithIngestionResponse()
+    {
+        var expected = CreateIngestionResponse();
+        var ingestionService = new FakeRepositoryIngestionService { Response = expected };
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services
+            .AddControllers()
+            .AddApplicationPart(typeof(RepositoryProjectsController).Assembly);
+        builder.Services.AddSingleton<IRepositoryProjectService>(new FakeRepositoryProjectService());
+        builder.Services.AddSingleton<IRepositoryIngestionService>(ingestionService);
+
+        await using var app = builder.Build();
+        app.MapControllers();
+        await app.StartAsync();
+
+        try
+        {
+            var server = app.Services.GetRequiredService<IServer>();
+            var address = server.Features
+                .Get<IServerAddressesFeature>()?
+                .Addresses
+                .Single()
+                ?? throw new InvalidOperationException("The test server did not expose its listening address.");
+            using var client = new HttpClient { BaseAddress = new Uri(address) };
+
+            using var response = await client.PostAsync(
+                $"/api/repository-projects/{expected.RepositoryProjectId}/ingest",
+                content: null);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var actual = await response.Content.ReadFromJsonAsync<RepositoryIngestionResponse>();
+            Assert.Equal(expected, actual);
+            Assert.Equal(expected.RepositoryProjectId, ingestionService.LastRepositoryProjectId);
+        }
+        finally
+        {
+            await app.StopAsync();
+        }
+    }
+
+    [Fact]
     public async Task RegisterEndpoint_Returns201WithLocationThatResolvesToProject()
     {
         var repository = new FakeRepositoryProjectRepository();
@@ -270,6 +492,7 @@ public sealed class RepositoryProjectServiceTests
             .AddControllers()
             .AddApplicationPart(typeof(RepositoryProjectsController).Assembly);
         builder.Services.AddSingleton<IRepositoryProjectService>(service);
+        builder.Services.AddSingleton<IRepositoryIngestionService>(new FakeRepositoryIngestionService());
 
         await using var app = builder.Build();
         app.MapControllers();
@@ -402,6 +625,7 @@ public sealed class RepositoryProjectServiceTests
             .AddControllers()
             .AddApplicationPart(typeof(RepositoryProjectsController).Assembly);
         builder.Services.AddSingleton<IRepositoryProjectService>(service);
+        builder.Services.AddSingleton<IRepositoryIngestionService>(new FakeRepositoryIngestionService());
 
         await using var app = builder.Build();
         app.MapControllers();
@@ -450,14 +674,49 @@ public sealed class RepositoryProjectServiceTests
         }
     }
 
-    private static RepositoryProjectsController CreateController(IRepositoryProjectService service) =>
-        new(service)
+    private static RepositoryProjectsController CreateController(
+        IRepositoryProjectService? service = null,
+        IRepositoryIngestionService? ingestionService = null) =>
+        new(
+            service ?? new FakeRepositoryProjectService(),
+            ingestionService ?? new FakeRepositoryIngestionService())
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext()
             }
         };
+
+    private static RepositoryProjectsController CreateController(
+        IRepositoryIngestionService ingestionService) =>
+        new(new FakeRepositoryProjectService(), ingestionService)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+    private static RepositoryIngestionResponse CreateIngestionResponse() =>
+        new(
+            Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            Guid.Parse("20000000-0000-0000-0000-000000000002"),
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            3,
+            5,
+            new DateTimeOffset(2026, 11, 8, 8, 0, 0, TimeSpan.Zero));
+
+    private static void AssertIngestionProblem(
+        IActionResult? actionResult,
+        int expectedStatusCode,
+        string sensitiveDetail)
+    {
+        var problemResult = Assert.IsType<ObjectResult>(actionResult);
+        var problem = Assert.IsType<ProblemDetails>(problemResult.Value);
+        Assert.Equal(expectedStatusCode, problemResult.StatusCode);
+        Assert.Equal(expectedStatusCode, problem.Status);
+        Assert.DoesNotContain(sensitiveDetail, problem.Detail);
+    }
 
     private static RegisterRepositoryProjectRequest CreateGitHubRequest() =>
         new()
@@ -535,6 +794,51 @@ public sealed class RepositoryProjectServiceTests
             AddedProject = project;
             LastCancellationToken = cancellationToken;
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeRepositoryProjectService : IRepositoryProjectService
+    {
+        public Task<RepositoryProjectResponse> RegisterAsync(
+            RegisterRepositoryProjectRequest request,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new RepositoryProjectResponse(
+                Guid.Parse("30000000-0000-0000-0000-000000000003"),
+                request.Name,
+                request.RepositoryUrl,
+                request.Description,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow));
+
+        public Task<RepositoryProjectResponse?> GetByIdAsync(
+            Guid id,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<RepositoryProjectResponse?>(null);
+
+        public Task<IReadOnlyList<RepositoryProjectResponse>> GetAllAsync(
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<RepositoryProjectResponse>>([]);
+    }
+
+    private sealed class FakeRepositoryIngestionService : IRepositoryIngestionService
+    {
+        public RepositoryIngestionResponse Response { get; init; } = CreateIngestionResponse();
+
+        public Exception? ExceptionToThrow { get; init; }
+
+        public Guid? LastRepositoryProjectId { get; private set; }
+
+        public CancellationToken LastCancellationToken { get; private set; }
+
+        public Task<RepositoryIngestionResponse> IngestAsync(
+            Guid repositoryProjectId,
+            CancellationToken cancellationToken = default)
+        {
+            LastRepositoryProjectId = repositoryProjectId;
+            LastCancellationToken = cancellationToken;
+            return ExceptionToThrow is null
+                ? Task.FromResult(Response)
+                : Task.FromException<RepositoryIngestionResponse>(ExceptionToThrow);
         }
     }
 
