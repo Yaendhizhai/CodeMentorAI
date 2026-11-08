@@ -13,6 +13,10 @@ export class RepositoryApiService {
     return this.http.post<RepositoryProject>(this.projectsUrl, request);
   }
 
+  getAll(): Observable<RepositoryProject[]> {
+    return this.http.get<RepositoryProject[]>(this.projectsUrl);
+  }
+
   getById(id: string): Observable<RepositoryProject> {
     return this.http.get<RepositoryProject>(`${this.projectsUrl}/${encodeURIComponent(id)}`);
   }

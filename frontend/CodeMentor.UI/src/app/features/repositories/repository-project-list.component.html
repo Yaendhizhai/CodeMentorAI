@@ -1,0 +1,42 @@
+<section class="panel repository-list" aria-labelledby="repository-list-title">
+  <div class="list-heading">
+    <div><h2 id="repository-list-title">Registered repositories</h2><p>Your repository projects in this workspace</p></div>
+    <button class="button button-secondary" type="button" [disabled]="loading()" (click)="refresh.emit()">
+      @if (loading()) { <span class="spinner dark"></span> Refreshing… } @else { ↻ Refresh }
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="list-state" role="status"><span class="spinner dark"></span> Loading repositories…</div>
+  } @else if (error()) {
+    <div class="list-state list-error" role="alert">
+      <span>{{ error() }}</span>
+      <button class="button button-secondary" type="button" (click)="refresh.emit()">Try again</button>
+    </div>
+  } @else if (projects().length === 0) {
+    <div class="list-state empty-list">
+      <span class="section-icon">⌘</span>
+      <strong>No repositories registered yet</strong>
+      <p>Register a public GitHub repository using the form above to see it here.</p>
+    </div>
+  } @else {
+    <div class="repository-items">
+      @for (project of projects(); track project.id) {
+        <a class="repository-item" [routerLink]="['/repositories', project.id]">
+          <span class="repository-symbol" aria-hidden="true">⌘</span>
+          <span class="repository-copy">
+            <strong>{{ project.name }}</strong>
+            @if (project.repositoryUrl) {
+              <span class="repository-url">{{ project.repositoryUrl }}</span>
+            }
+            @if (project.description) {
+              <span class="repository-description">{{ project.description }}</span>
+            }
+          </span>
+          <span class="repository-date">Added {{ project.createdAtUtc | date:'mediumDate' }}</span>
+          <span class="repository-open" aria-hidden="true">→</span>
+        </a>
+      }
+    </div>
+  }
+</section>

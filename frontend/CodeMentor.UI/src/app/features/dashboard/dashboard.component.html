@@ -26,7 +26,12 @@
 <section class="stats-grid" aria-label="Workspace statistics">
   <article class="stat-card">
     <div class="stat-top"><span class="stat-icon purple">▤</span><span class="stat-label">Repositories</span></div>
-    <strong>—</strong><small>Available when listing API is added</small>
+    <strong>{{ repositoryCount() ?? '—' }}</strong>
+    <small>
+      @if (repositoriesLoading()) { Loading repositories… }
+      @else if (repositoriesError()) { Repository count unavailable }
+      @else { Registered in this workspace }
+    </small>
   </article>
   <article class="stat-card">
     <div class="stat-top"><span class="stat-icon blue">⌘</span><span class="stat-label">Indexed files</span></div>
@@ -58,9 +63,3 @@
     <a class="quick-action" routerLink="/mentor"><span class="quick-icon mentor">✦</span><span><b>Ask the AI mentor</b><small>Chat becomes available with a backend endpoint</small></span><i>→</i></a>
   </section>
 </div>
-
-<app-feature-unavailable
-  title="Repository and indexing totals are not available yet"
-  description="The API currently supports registering a repository and retrieving it by ID. It does not expose a repository list or aggregate statistics, so this dashboard does not invent counts."
-  endpoint="GET /api/repository-projects"
-/>

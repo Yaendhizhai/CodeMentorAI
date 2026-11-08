@@ -3,7 +3,7 @@
   title="Repositories"
   description="Register a public GitHub repository or open a project you already know by its ID."
 >
-  <span class="availability-pill"><span></span> Public GitHub repositories</span>
+  <span class="availability-pill"><span></span> Repository workspace</span>
 </app-page-heading>
 
 <div class="repositories-grid">
@@ -73,15 +73,12 @@
       </button>
     </section>
 
-    <section class="info-card">
-      <span class="info-mark">i</span>
-      <div><strong>Repository listing is not available</strong><p>The API supports registration and lookup by ID, but does not yet expose a list endpoint. Newly registered details appear here after a successful response.</p></div>
-    </section>
   </aside>
 </div>
 
-<app-feature-unavailable
-  title="Repository inventory endpoint not implemented"
-  description="Existing projects cannot be listed automatically yet. Use the project ID returned at registration to open details."
-  endpoint="GET /api/repository-projects"
+<app-repository-project-list
+  [projects]="projects()"
+  [loading]="projectsLoading()"
+  [error]="projectsError()"
+  (refresh)="refreshProjects()"
 />

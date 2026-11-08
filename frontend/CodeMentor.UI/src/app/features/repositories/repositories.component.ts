@@ -7,12 +7,12 @@ import { ApiErrorService } from '../../core/services/api-error.service';
 import { RepositoryApiService } from '../../core/services/repository-api.service';
 import { RepositoryProject } from '../../core/models/repository-project.model';
 import { PageHeadingComponent } from '../../shared/components/page-heading.component';
-import { FeatureUnavailableComponent } from '../../shared/components/feature-unavailable.component';
+import { RepositoryProjectListComponent } from './repository-project-list.component';
 
 const githubRepositoryPattern = /^https:\/\/github\.com\/[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\/[A-Za-z0-9_.-]+(?:\.git)?$/i;
 
 @Component({
-  imports: [KeyValuePipe, ReactiveFormsModule, RouterLink, PageHeadingComponent, FeatureUnavailableComponent],
+  imports: [KeyValuePipe, ReactiveFormsModule, RouterLink, PageHeadingComponent, RepositoryProjectListComponent],
   templateUrl: './repositories.component.html',
   styleUrl: './repositories.component.scss',
 })
@@ -30,12 +30,19 @@ export class RepositoriesComponent {
   protected readonly lookupId = signal('');
   protected readonly lookupBusy = signal(false);
   protected readonly lookupError = signal('');
+  protected readonly projects = signal<readonly RepositoryProject[]>([]);
+  protected readonly projectsLoading = signal(true);
+  protected readonly projectsError = signal('');
 
   protected readonly form = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(200)]],
     repositoryUrl: ['', [Validators.required, Validators.maxLength(2048), Validators.pattern(githubRepositoryPattern)]],
     description: ['', [Validators.maxLength(2000)]],
   });
+
+  constructor() {
+    this.refreshProjects();
+  }
 
   protected submit(): void {
     this.errorMessage.set('');
@@ -58,6 +65,7 @@ export class RepositoriesComponent {
         next: (project) => {
           this.registeredProject.set(project);
           this.busy.set(false);
+          this.refreshProjects();
         },
         error: (error: unknown) => {
           this.errorMessage.set(this.apiErrors.message(error));
@@ -93,5 +101,23 @@ export class RepositoriesComponent {
 
   protected updateLookupId(event: Event): void {
     this.lookupId.set((event.target as HTMLInputElement).value);
+  }
+
+  protected refreshProjects(): void {
+    this.projectsLoading.set(true);
+    this.projectsError.set('');
+    this.repositoryApi
+      .getAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (projects) => {
+          this.projects.set(projects);
+          this.projectsLoading.set(false);
+        },
+        error: (error: unknown) => {
+          this.projectsError.set(this.apiErrors.message(error));
+          this.projectsLoading.set(false);
+        },
+      });
   }
 }

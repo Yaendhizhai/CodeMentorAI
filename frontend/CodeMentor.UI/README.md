@@ -46,9 +46,10 @@ npm test -- --watch=false
 The backend currently exposes:
 
 - `POST /api/repository-projects` — register a public GitHub repository.
+- `GET /api/repository-projects` — list registered repository projects.
 - `GET /api/repository-projects/{id}` — retrieve one repository project.
 
-The UI does not pretend these endpoints exist: repository listing, ingestion trigger, analysis-session history, HTTP code retrieval, and AI conversation endpoints are currently unavailable. Corresponding pages explain the missing API capability and do not fabricate results or citations.
+The UI does not pretend unavailable endpoints exist: ingestion trigger, analysis-session history, HTTP code retrieval, and AI conversation endpoints are currently unavailable. Corresponding pages explain the missing API capability and do not fabricate results or citations.
 
 ## Structure
 

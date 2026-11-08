@@ -62,4 +62,25 @@ describe('RepositoryApiService', () => {
     apiRequest.flush(expected);
     expect(response).toEqual(expected);
   });
+
+  it('loads all repository projects through the configured projects route', () => {
+    const expected: RepositoryProject[] = [
+      {
+        id: '00e3ec8f-870d-4c7a-b922-9e792fb932ce',
+        name: 'Commerce',
+        repositoryUrl: 'https://github.com/acme/commerce',
+        description: 'Commerce services',
+        createdAtUtc: '2026-01-01T00:00:00Z',
+        updatedAtUtc: '2026-01-01T00:00:00Z',
+      },
+    ];
+    let response: RepositoryProject[] | undefined;
+
+    service.getAll().subscribe((projects) => (response = projects));
+
+    const apiRequest = http.expectOne('/api/repository-projects');
+    expect(apiRequest.request.method).toBe('GET');
+    apiRequest.flush(expected);
+    expect(response).toEqual(expected);
+  });
 });
