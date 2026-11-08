@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CodeMentor.Application.CodeRetrieval;
 using CodeMentor.Application.GitHub;
 using CodeMentor.Application.RepositoryIngestion;
 using CodeMentor.Application.RepositoryProjects;
@@ -10,7 +11,8 @@ namespace CodeMentor.API.Controllers;
 [Route("api/repository-projects")]
 public sealed class RepositoryProjectsController(
     IRepositoryProjectService repositoryProjectService,
-    IRepositoryIngestionService repositoryIngestionService)
+    IRepositoryIngestionService repositoryIngestionService,
+    ICodeRetrievalService codeRetrievalService)
     : ControllerBase
 {
     private const string AlreadyIngestedErrorMessage =
@@ -74,6 +76,47 @@ public sealed class RepositoryProjectsController(
     {
         var projects = await repositoryProjectService.GetAllAsync(cancellationToken);
         return Ok(projects);
+    }
+
+    /// <summary>Searches source-code chunks within a repository project.</summary>
+    /// <param name="id">The repository project ID.</param>
+    /// <param name="request">The search query and result limit.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>Matching code chunks, or an empty collection.</returns>
+    [HttpPost("{id:guid}/code-search")]
+    [ProducesResponseType<IReadOnlyList<CodeChunkSearchResult>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<CodeChunkSearchResult>>> SearchCode(
+        Guid id,
+        [FromBody] CodeSearchRequest request,
+        CancellationToken cancellationToken)
+    {
+        var project = await repositoryProjectService.GetByIdAsync(id, cancellationToken);
+        if (project is null)
+        {
+            return Problem(
+                title: "Repository project not found",
+                detail: "The requested repository project does not exist.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+
+        try
+        {
+            var results = await codeRetrievalService.SearchAsync(
+                id,
+                request.Query,
+                request.Limit,
+                cancellationToken);
+            return Ok(results);
+        }
+        catch (ArgumentException)
+        {
+            return Problem(
+                title: "Invalid code search request",
+                detail: "Provide a searchable query and a result limit between 1 and 100.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
     }
 
     /// <summary>Ingests a repository project's source files and code chunks.</summary>

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { CodeChunkSearchResult, CodeSearchRequest } from '../models/code-search.model';
 import {
   RegisterRepositoryProjectRequest,
   RepositoryIngestionResponse,
@@ -29,6 +30,13 @@ export class RepositoryApiService {
     return this.http.post<RepositoryIngestionResponse>(
       `${this.projectsUrl}/${encodeURIComponent(id)}/ingest`,
       null,
+    );
+  }
+
+  searchCode(id: string, request: CodeSearchRequest): Observable<CodeChunkSearchResult[]> {
+    return this.http.post<CodeChunkSearchResult[]>(
+      `${this.projectsUrl}/${encodeURIComponent(id)}/code-search`,
+      request,
     );
   }
 }

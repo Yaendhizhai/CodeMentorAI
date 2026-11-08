@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CodeMentor.Application.Abstractions.Persistence;
+using CodeMentor.Application.CodeRetrieval;
 using CodeMentor.Application.GitHub;
 using CodeMentor.Application.RepositoryIngestion;
 using CodeMentor.Application.RepositoryProjects;
@@ -448,6 +449,7 @@ public sealed class RepositoryProjectServiceTests
             .AddApplicationPart(typeof(RepositoryProjectsController).Assembly);
         builder.Services.AddSingleton<IRepositoryProjectService>(new FakeRepositoryProjectService());
         builder.Services.AddSingleton<IRepositoryIngestionService>(ingestionService);
+        builder.Services.AddSingleton<ICodeRetrievalService>(new FakeCodeRetrievalService());
 
         await using var app = builder.Build();
         app.MapControllers();
@@ -493,6 +495,7 @@ public sealed class RepositoryProjectServiceTests
             .AddApplicationPart(typeof(RepositoryProjectsController).Assembly);
         builder.Services.AddSingleton<IRepositoryProjectService>(service);
         builder.Services.AddSingleton<IRepositoryIngestionService>(new FakeRepositoryIngestionService());
+        builder.Services.AddSingleton<ICodeRetrievalService>(new FakeCodeRetrievalService());
 
         await using var app = builder.Build();
         app.MapControllers();
@@ -626,6 +629,7 @@ public sealed class RepositoryProjectServiceTests
             .AddApplicationPart(typeof(RepositoryProjectsController).Assembly);
         builder.Services.AddSingleton<IRepositoryProjectService>(service);
         builder.Services.AddSingleton<IRepositoryIngestionService>(new FakeRepositoryIngestionService());
+        builder.Services.AddSingleton<ICodeRetrievalService>(new FakeCodeRetrievalService());
 
         await using var app = builder.Build();
         app.MapControllers();
@@ -679,7 +683,8 @@ public sealed class RepositoryProjectServiceTests
         IRepositoryIngestionService? ingestionService = null) =>
         new(
             service ?? new FakeRepositoryProjectService(),
-            ingestionService ?? new FakeRepositoryIngestionService())
+            ingestionService ?? new FakeRepositoryIngestionService(),
+            new FakeCodeRetrievalService())
         {
             ControllerContext = new ControllerContext
             {
@@ -689,7 +694,7 @@ public sealed class RepositoryProjectServiceTests
 
     private static RepositoryProjectsController CreateController(
         IRepositoryIngestionService ingestionService) =>
-        new(new FakeRepositoryProjectService(), ingestionService)
+        new(new FakeRepositoryProjectService(), ingestionService, new FakeCodeRetrievalService())
         {
             ControllerContext = new ControllerContext
             {

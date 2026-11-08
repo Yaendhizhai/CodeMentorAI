@@ -1,31 +1,129 @@
 <app-page-heading
   eyebrow="Project-scoped lexical search"
   title="Code Explorer"
-  description="Find code chunks by matching source text across an indexed repository."
+  description="Find code chunks by matching source text in an indexed repository."
 />
 
-<app-feature-unavailable
-  title="Code search API endpoint not implemented"
-  description="The backend has a project-scoped lexical retrieval Application service, but no HTTP controller route exposes it yet. Search is disabled so the UI will not send requests to a guessed endpoint."
-  endpoint="POST /api/repository-projects/{id}/code-search"
-/>
-
-<section class="search-panel">
-  <div class="search-head"><span class="search-icon">⌕</span><div><h2>Search your codebase</h2><p>Search will be enabled once a controller exposes the retrieval service.</p></div></div>
-  <div class="search-row">
-    <label class="sr-only" for="code-query">Search query</label>
-    <input id="code-query" placeholder="Search for a class, method, or phrase…" disabled />
-    <label class="sr-only" for="repository-select">Repository</label>
-    <select id="repository-select" disabled><option>Select repository</option></select>
-    <label class="sr-only" for="result-limit">Result limit</label>
-    <select id="result-limit" disabled><option>10 results</option><option>25 results</option><option>50 results</option><option>100 results</option></select>
-    <button type="button" disabled>Search</button>
+<section class="search-panel" aria-labelledby="search-title">
+  <div class="search-head">
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <div>
+      <h2 id="search-title">Search your codebase</h2>
+      <p>Lexical substring search scoped to the repository you select.</p>
+    </div>
   </div>
-  <div class="search-foot"><span>Lexical substring search</span><span>Project scoped</span><span>Evidence with file and line citations</span></div>
+
+  @if (repositoriesLoading()) {
+    <div class="repository-state" role="status">Loading repositories…</div>
+  } @else if (repositoriesError()) {
+    <div class="repository-state error-state" role="alert">
+      <span>{{ repositoriesError() }}</span>
+      <button class="button button-secondary" type="button" (click)="loadRepositories()">Try again</button>
+    </div>
+  } @else if (repositories().length === 0) {
+    <div class="repository-state empty-state">
+      No repositories are registered yet. Register a repository before searching its code.
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="search()" novalidate>
+    <div class="search-row">
+      <div class="field query-field">
+        <label for="code-query">Search query</label>
+        <input
+          id="code-query"
+          type="search"
+          formControlName="query"
+          maxlength="200"
+          placeholder="Search for a class, method, or phrase…"
+          aria-describedby="query-hint query-error"
+          (input)="queryChanged()"
+        />
+        <small id="query-hint">Up to 200 characters and 10 distinct terms.</small>
+        @if (validationError()) {
+          <small id="query-error" class="field-error" role="alert">{{ validationError() }}</small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="repository-select">Repository</label>
+        <select
+          id="repository-select"
+          formControlName="repositoryId"
+          (change)="repositoryChanged()"
+        >
+          <option value="">Select a repository</option>
+          @for (repository of repositories(); track repository.id) {
+            <option [value]="repository.id">{{ repository.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field limit-field">
+        <label for="result-limit">Result limit</label>
+        <select id="result-limit" formControlName="limit">
+          <option [ngValue]="10">10 results</option>
+          <option [ngValue]="25">25 results</option>
+          <option [ngValue]="50">50 results</option>
+          <option [ngValue]="100">100 results</option>
+        </select>
+      </div>
+
+      <button class="button button-primary search-button" type="submit" [disabled]="searchLoading()">
+        @if (searchLoading()) { <span class="spinner" aria-hidden="true"></span> Searching… } @else { Search }
+      </button>
+    </div>
+  </form>
+
+  <div class="search-foot" aria-label="Search characteristics">
+    <span>Lexical substring search</span>
+    <span>Project scoped</span>
+    <span>File and line references</span>
+  </div>
 </section>
 
-<section class="results-placeholder">
-  <div class="magnifier">⌕</div>
-  <h2>Search results will appear here</h2>
-  <p>No search request has been sent. The API route is not yet available.</p>
+<section class="results-section" aria-labelledby="results-title" aria-live="polite">
+  <div class="results-heading">
+    <h2 id="results-title">Search results</h2>
+    @if (results().length > 0) { <span>{{ results().length }} matches</span> }
+  </div>
+
+  @if (searchLoading()) {
+    <div class="results-state" role="status"><span class="spinner dark"></span> Searching selected repository…</div>
+  } @else if (searchError()) {
+    <div class="results-state error-state" role="alert">
+      <span>{{ searchError() }}</span>
+      <button class="button button-secondary" type="button" (click)="search()">Retry search</button>
+    </div>
+  } @else if (hasSearched() && results().length === 0) {
+    <div class="results-state empty-state">
+      <span class="magnifier" aria-hidden="true">⌕</span>
+      <strong>No matching code chunks</strong>
+      <p>Try different terms or search another repository.</p>
+    </div>
+  } @else if (results().length > 0) {
+    <div class="result-list">
+      @for (result of results(); track result.relativePath + ':' + result.chunkIndex) {
+        <article class="result-card">
+          <header class="result-header">
+            <div class="result-file">
+              <span class="file-icon" aria-hidden="true">⌘</span>
+              <strong>{{ result.relativePath }}</strong>
+            </div>
+            <span class="match-score">Match score {{ result.matchScore }}</span>
+          </header>
+          <div class="result-meta">
+            Chunk {{ result.chunkIndex }} · Lines {{ result.startLine }}–{{ result.endLine }}
+          </div>
+          <pre><code>{{ result.content }}</code></pre>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="results-state empty-state">
+      <span class="magnifier" aria-hidden="true">⌕</span>
+      <strong>Search results will appear here</strong>
+      <p>Select a repository and enter a searchable query to get started.</p>
+    </div>
+  }
 </section>

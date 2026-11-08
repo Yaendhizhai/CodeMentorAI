@@ -3,6 +3,7 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { RepositoryApiService } from './repository-api.service';
 import { RepositoryIngestionResponse, RepositoryProject } from '../models/repository-project.model';
+import { CodeChunkSearchResult } from '../models/code-search.model';
 
 describe('RepositoryApiService', () => {
   let service: RepositoryApiService;
@@ -101,6 +102,30 @@ describe('RepositoryApiService', () => {
     const apiRequest = http.expectOne(`/api/repository-projects/${id}/ingest`);
     expect(apiRequest.request.method).toBe('POST');
     expect(apiRequest.request.body).toBeNull();
+    apiRequest.flush(expected);
+    expect(response).toEqual(expected);
+  });
+
+  it('searches code in the selected project using the configured repository route', () => {
+    const id = '00e3ec8f-870d-4c7a-b922-9e792fb932ce';
+    const request = { query: 'class Widget', limit: 25 };
+    const expected: CodeChunkSearchResult[] = [
+      {
+        relativePath: 'src/Widget.cs',
+        chunkIndex: 0,
+        startLine: 3,
+        endLine: 14,
+        content: 'public class Widget {}',
+        matchScore: 2,
+      },
+    ];
+    let response: CodeChunkSearchResult[] | undefined;
+
+    service.searchCode(id, request).subscribe((results) => (response = results));
+
+    const apiRequest = http.expectOne(`/api/repository-projects/${id}/code-search`);
+    expect(apiRequest.request.method).toBe('POST');
+    expect(apiRequest.request.body).toEqual(request);
     apiRequest.flush(expected);
     expect(response).toEqual(expected);
   });

@@ -49,8 +49,9 @@ The backend currently exposes:
 - `GET /api/repository-projects` — list registered repository projects.
 - `GET /api/repository-projects/{id}` — retrieve one repository project.
 - `POST /api/repository-projects/{id}/ingest` — synchronously ingest a registered repository. Use the **Ingest** action on its repository-list row; the UI displays the returned file/chunk counts and refreshes the list. Existing ingested repositories return a conflict, and repositories beyond ingestion limits show a size-limit message.
+- `POST /api/repository-projects/{id}/code-search` — lexically search code chunks within the selected project. In Code Explorer, select a repository, enter a query, and choose a result limit (10, 25, 50, or 100). Results include repository-relative paths, chunk indices, line ranges, content, and match scores. Search is not semantic and does not call an AI service.
 
-The UI does not pretend unavailable endpoints exist: analysis-session history, HTTP code retrieval, and AI conversation endpoints are currently unavailable. Corresponding pages explain the missing API capability and do not fabricate results or citations.
+Analysis-session history and AI conversation endpoints are currently unavailable. Corresponding pages explain the missing API capability and do not fabricate results or citations.
 
 ## Structure
 
