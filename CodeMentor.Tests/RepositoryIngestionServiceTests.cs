@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CodeMentor.Application.Abstractions.Persistence;
+using CodeMentor.Application.CodeRetrieval;
 using CodeMentor.Application.GitHub;
 using CodeMentor.Application.RepositoryIngestion;
 using CodeMentor.Core.Entities;
@@ -390,6 +391,13 @@ public sealed class RepositoryIngestionServiceTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<CodeChunk>>(
                 Added.Where(chunk => chunk.RepositoryFileId == repositoryFileId).ToArray());
+
+        public Task<IReadOnlyList<CodeChunkSearchResult>> SearchAsync(
+            Guid projectId,
+            IReadOnlyList<string> normalizedTerms,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<CodeChunkSearchResult>>([]);
 
         public Task AddAsync(CodeChunk chunk, CancellationToken cancellationToken = default)
         {
